@@ -7,10 +7,12 @@ import type {
 	DevtoolsPaneData,
 	FilePaneData,
 	PaneViewerData,
+	TerminalPaneData,
 } from "../../types";
 import { ChatPane } from "./components/ChatPane";
 import { WorkspaceFilePreview } from "./components/FilesPane/components/WorkspaceFilePreview/WorkspaceFilePreview";
 import { TerminalPane } from "./components/TerminalPane";
+import { terminalRuntimeRegistry } from "./components/TerminalPane/terminalRuntimeRegistry";
 
 function getFileTitle(filePath: string): string {
 	return filePath.split("/").pop() ?? filePath;
@@ -40,7 +42,19 @@ export function usePaneRegistry(
 			terminal: {
 				getIcon: () => <TerminalSquare className="size-4" />,
 				getTitle: () => "Terminal",
-				renderPane: () => <TerminalPane workspaceId={workspaceId} />,
+				renderPane: (ctx: RendererContext<PaneViewerData>) => {
+					const data = ctx.pane.data as TerminalPaneData;
+					return (
+						<TerminalPane
+							paneId={ctx.pane.id}
+							sessionKey={data.sessionKey}
+							workspaceId={workspaceId}
+						/>
+					);
+				},
+				onRemovePane: ({ pane }) => {
+					terminalRuntimeRegistry.dispose(pane.id);
+				},
 			},
 			browser: {
 				getIcon: () => <Globe className="size-4" />,

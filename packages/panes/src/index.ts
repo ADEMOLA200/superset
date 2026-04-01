@@ -10,6 +10,7 @@ export type {
 	PaneContext,
 	PaneDefinition,
 	PaneRegistry,
+	RemovedPaneContext,
 	RendererContext,
 	TabContext,
 	WorkspaceProps,

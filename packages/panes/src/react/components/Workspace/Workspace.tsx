@@ -3,6 +3,7 @@ import { useStore } from "zustand";
 import type { WorkspaceProps } from "../../types";
 import { Tab } from "./components/Tab";
 import { TabBar } from "./components/TabBar";
+import { usePaneRemovalLifecycle } from "./hooks/usePaneRemovalLifecycle";
 
 export function Workspace<TData>({
 	store,
@@ -14,6 +15,8 @@ export function Workspace<TData>({
 	onBeforeCloseTab,
 	paneActions,
 }: WorkspaceProps<TData>) {
+	usePaneRemovalLifecycle({ store, registry });
+
 	const tabs = useStore(store, (s) => s.tabs);
 	const activeTabId = useStore(store, (s) => s.activeTabId);
 	const activeTab = tabs.find((t) => t.id === activeTabId) ?? null;

@@ -41,6 +41,12 @@ export interface RendererContext<TData> {
 	};
 }
 
+export interface RemovedPaneContext<TData> {
+	pane: Pane<TData>;
+	tab: Tab<TData>;
+	store: StoreApi<WorkspaceStore<TData>>;
+}
+
 export interface PaneDefinition<TData> {
 	renderPane(context: RendererContext<TData>): ReactNode;
 	getTitle?(context: RendererContext<TData>): ReactNode;
@@ -48,6 +54,7 @@ export interface PaneDefinition<TData> {
 	renderTitle?(context: RendererContext<TData>): ReactNode;
 	renderHeaderExtras?(context: RendererContext<TData>): ReactNode;
 	renderToolbar?(context: RendererContext<TData>): ReactNode;
+	onRemovePane?(context: RemovedPaneContext<TData>): void | Promise<void>;
 	paneActions?:
 		| PaneActionConfig<TData>[]
 		| ((

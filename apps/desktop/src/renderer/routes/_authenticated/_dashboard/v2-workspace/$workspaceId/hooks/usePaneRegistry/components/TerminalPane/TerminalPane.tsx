@@ -1,34 +1,28 @@
 import { Button } from "@superset/ui/button";
-import { FitAddon } from "@xterm/addon-fit";
-import { Terminal as XTerm } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
 import { useEffect, useRef, useState } from "react";
 import { useWorkspaceWsUrl } from "../../../../../providers/WorkspaceTrpcProvider/WorkspaceTrpcProvider";
+import {
+	type TerminalConnectionState,
+	terminalRuntimeRegistry,
+} from "./terminalRuntimeRegistry";
 
 interface WorkspaceTerminalProps {
+	paneId: string;
+	sessionKey: string;
 	workspaceId: string;
 }
 
-type TerminalServerMessage =
-	| {
-			type: "data";
-			data: string;
-	  }
-	| {
-			type: "error";
-			message: string;
-	  }
-	| {
-			type: "exit";
-			exitCode: number;
-			signal: number;
-	  };
-
-export function TerminalPane({ workspaceId }: WorkspaceTerminalProps) {
+export function TerminalPane({
+	paneId,
+	sessionKey,
+	workspaceId,
+}: WorkspaceTerminalProps) {
 	const containerRef = useRef<HTMLDivElement | null>(null);
-	const [connectionState, setConnectionState] = useState<
-		"connecting" | "open" | "closed"
-	>("connecting");
+	const [connectionState, setConnectionState] =
+		useState<TerminalConnectionState>(() =>
+			terminalRuntimeRegistry.getConnectionState(paneId),
+		);
 	const [reconnectKey, setReconnectKey] = useState(0);
 
 	const websocketUrl = useWorkspaceWsUrl(`/terminal/${workspaceId}`, {
@@ -41,102 +35,24 @@ export function TerminalPane({ workspaceId }: WorkspaceTerminalProps) {
 			return;
 		}
 
-		const fitAddon = new FitAddon();
-		const terminal = new XTerm({
-			cursorBlink: true,
-			fontFamily:
-				'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-			fontSize: 12,
-			theme: {
-				background: "#14100f",
-				foreground: "#f5efe9",
-			},
-		});
-		terminal.loadAddon(fitAddon);
-		terminal.open(container);
-		fitAddon.fit();
-		terminal.focus();
+		const unsubscribe = terminalRuntimeRegistry.subscribe(
+			paneId,
+			setConnectionState,
+		);
 
-		setConnectionState("connecting");
-		const socket = new WebSocket(websocketUrl);
-
-		const sendResize = () => {
-			if (socket.readyState !== WebSocket.OPEN) {
-				return;
-			}
-
-			socket.send(
-				JSON.stringify({
-					type: "resize",
-					cols: terminal.cols,
-					rows: terminal.rows,
-				}),
-			);
-		};
-
-		const resizeObserver = new ResizeObserver(() => {
-			fitAddon.fit();
-			sendResize();
-		});
-		resizeObserver.observe(container);
-
-		const onTerminalDataDispose = terminal.onData((data) => {
-			if (socket.readyState !== WebSocket.OPEN) {
-				return;
-			}
-
-			socket.send(
-				JSON.stringify({
-					type: "input",
-					data,
-				}),
-			);
-		});
-
-		socket.addEventListener("open", () => {
-			setConnectionState("open");
-			sendResize();
-		});
-
-		socket.addEventListener("message", (event) => {
-			let message: TerminalServerMessage;
-			try {
-				message = JSON.parse(String(event.data)) as TerminalServerMessage;
-			} catch {
-				terminal.writeln("\r\n[terminal] invalid server payload");
-				return;
-			}
-
-			if (message.type === "data") {
-				terminal.write(message.data);
-				return;
-			}
-
-			if (message.type === "error") {
-				terminal.writeln(`\r\n[terminal] ${message.message}`);
-				return;
-			}
-
-			terminal.writeln(
-				`\r\n[terminal] exited with code ${message.exitCode} (signal ${message.signal})`,
-			);
-		});
-
-		socket.addEventListener("close", () => {
-			setConnectionState("closed");
-		});
-
-		socket.addEventListener("error", () => {
-			terminal.writeln("\r\n[terminal] websocket error");
+		terminalRuntimeRegistry.attach({
+			paneId,
+			sessionKey,
+			workspaceId,
+			websocketUrl,
+			host: container,
 		});
 
 		return () => {
-			resizeObserver.disconnect();
-			onTerminalDataDispose.dispose();
-			socket.close();
-			terminal.dispose();
+			unsubscribe();
+			terminalRuntimeRegistry.detach(paneId);
 		};
-	}, [websocketUrl]);
+	}, [paneId, sessionKey, websocketUrl, workspaceId]);
 
 	return (
 		<div className="w-full rounded-lg border border-border p-4">
@@ -159,10 +75,7 @@ export function TerminalPane({ workspaceId }: WorkspaceTerminalProps) {
 					Reconnect
 				</Button>
 			</div>
-			<div
-				ref={containerRef}
-				className="h-[360px] overflow-hidden rounded-md border border-border bg-[#14100f] p-2"
-			/>
+			<div ref={containerRef} className="h-[360px] overflow-hidden" />
 		</div>
 	);
 }
