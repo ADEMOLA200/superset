@@ -55,27 +55,7 @@ export function TerminalPane({
 	}, [paneId, sessionKey, websocketUrl, workspaceId]);
 
 	return (
-		<div className="w-full rounded-lg border border-border p-4">
-			<div className="mb-3 flex items-center justify-between gap-3">
-				<div>
-					<h2 className="text-sm font-medium">terminal</h2>
-					<p className="text-xs text-muted-foreground">
-						{connectionState === "open"
-							? "Connected"
-							: connectionState === "connecting"
-								? "Connecting..."
-								: "Disconnected"}
-					</p>
-				</div>
-				<Button
-					size="sm"
-					variant="outline"
-					onClick={() => setReconnectKey((value) => value + 1)}
-				>
-					Reconnect
-				</Button>
-			</div>
-			<div ref={containerRef} className="h-[360px] overflow-hidden" />
+		<div ref={containerRef} className='size-full' >
 		</div>
 	);
 }

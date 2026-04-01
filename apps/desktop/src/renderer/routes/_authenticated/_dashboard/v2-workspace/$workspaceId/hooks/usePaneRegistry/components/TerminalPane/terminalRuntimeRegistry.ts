@@ -62,7 +62,7 @@ function setConnectionState(
 function createWrapperElement(): HTMLDivElement {
 	const wrapper = document.createElement("div");
 	wrapper.className =
-		"h-full w-full overflow-hidden rounded-md border border-border bg-[#14100f] p-2";
+		"h-full w-full overflow-hidden p-2";
 	return wrapper;
 }
 
