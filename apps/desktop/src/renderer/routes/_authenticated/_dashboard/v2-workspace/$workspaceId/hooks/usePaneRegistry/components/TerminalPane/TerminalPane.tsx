@@ -1,11 +1,7 @@
-import { Button } from "@superset/ui/button";
 import "@xterm/xterm/css/xterm.css";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useWorkspaceWsUrl } from "../../../../../providers/WorkspaceTrpcProvider/WorkspaceTrpcProvider";
-import {
-	type TerminalConnectionState,
-	terminalRuntimeRegistry,
-} from "./terminalRuntimeRegistry";
+import { terminalRuntimeRegistry } from "./terminalRuntimeRegistry";
 
 interface WorkspaceTerminalProps {
 	paneId: string;
@@ -19,26 +15,13 @@ export function TerminalPane({
 	workspaceId,
 }: WorkspaceTerminalProps) {
 	const containerRef = useRef<HTMLDivElement | null>(null);
-	const [connectionState, setConnectionState] =
-		useState<TerminalConnectionState>(() =>
-			terminalRuntimeRegistry.getConnectionState(paneId),
-		);
-	const [reconnectKey, setReconnectKey] = useState(0);
-
-	const websocketUrl = useWorkspaceWsUrl(`/terminal/${workspaceId}`, {
-		reconnect: String(reconnectKey),
-	});
+	const websocketUrl = useWorkspaceWsUrl(`/terminal/pane/${paneId}`);
 
 	useEffect(() => {
 		const container = containerRef.current;
 		if (!container) {
 			return;
 		}
-
-		const unsubscribe = terminalRuntimeRegistry.subscribe(
-			paneId,
-			setConnectionState,
-		);
 
 		terminalRuntimeRegistry.attach({
 			paneId,
@@ -49,13 +32,9 @@ export function TerminalPane({
 		});
 
 		return () => {
-			unsubscribe();
 			terminalRuntimeRegistry.detach(paneId);
 		};
 	}, [paneId, sessionKey, websocketUrl, workspaceId]);
 
-	return (
-		<div ref={containerRef} className='size-full' >
-		</div>
-	);
+	return <div ref={containerRef} className="size-full" />;
 }

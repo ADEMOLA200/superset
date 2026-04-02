@@ -32,6 +32,7 @@ import { setPaneWorkspaceRunState } from "renderer/stores/tabs/workspace-run";
 import { useWorkspaceInitStore } from "renderer/stores/workspace-init";
 import { MOCK_ORG_ID, NOTIFICATION_EVENTS } from "shared/constants";
 import { AgentHooks } from "./components/AgentHooks";
+import { GlobalPaneLifecycleHooks } from "./components/GlobalPaneLifecycleHooks";
 import { TeardownLogsDialog } from "./components/TeardownLogsDialog";
 import { CollectionsProvider } from "./providers/CollectionsProvider";
 import { HostServiceProvider } from "./providers/HostServiceProvider";
@@ -176,6 +177,7 @@ function AuthenticatedLayout() {
 			<CollectionsProvider>
 				<HostServiceProvider>
 					<AgentHooks />
+					<GlobalPaneLifecycleHooks />
 					<Outlet />
 					<WorkspaceInitEffects />
 					{isV2CloudEnabled ? (

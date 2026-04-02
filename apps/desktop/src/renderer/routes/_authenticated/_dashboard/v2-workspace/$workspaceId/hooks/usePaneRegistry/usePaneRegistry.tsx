@@ -12,7 +12,6 @@ import type {
 import { ChatPane } from "./components/ChatPane";
 import { WorkspaceFilePreview } from "./components/FilesPane/components/WorkspaceFilePreview/WorkspaceFilePreview";
 import { TerminalPane } from "./components/TerminalPane";
-import { terminalRuntimeRegistry } from "./components/TerminalPane/terminalRuntimeRegistry";
 
 function getFileTitle(filePath: string): string {
 	return filePath.split("/").pop() ?? filePath;
@@ -51,9 +50,6 @@ export function usePaneRegistry(
 							workspaceId={workspaceId}
 						/>
 					);
-				},
-				onRemovePane: ({ pane }) => {
-					terminalRuntimeRegistry.dispose(pane.id);
 				},
 			},
 			browser: {

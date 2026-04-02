@@ -1,0 +1,1 @@
+export { collectPersistedTerminalPaneIds } from "./collectPersistedTerminalPaneIds";

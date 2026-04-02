@@ -19,6 +19,25 @@ type TerminalServerMessage =
 			signal: number;
 	  };
 
+type TerminalClientMessage =
+	| {
+			type: "init";
+			workspaceId: string;
+			sessionKey: string;
+	  }
+	| {
+			type: "input";
+			data: string;
+	  }
+	| {
+			type: "resize";
+			cols: number;
+			rows: number;
+	  }
+	| {
+			type: "dispose";
+	  };
+
 export interface AttachTerminalRuntimeOptions {
 	paneId: string;
 	sessionKey: string;
@@ -61,8 +80,7 @@ function setConnectionState(
 
 function createWrapperElement(): HTMLDivElement {
 	const wrapper = document.createElement("div");
-	wrapper.className =
-		"h-full w-full overflow-hidden p-2";
+	wrapper.className = "h-full w-full overflow-hidden p-2";
 	return wrapper;
 }
 
@@ -139,13 +157,30 @@ function sendResize(runtime: TerminalRuntime): void {
 		return;
 	}
 
-	runtime.socket.send(
-		JSON.stringify({
-			type: "resize",
-			cols: runtime.terminal.cols,
-			rows: runtime.terminal.rows,
-		}),
-	);
+	sendClientMessage(runtime, {
+		type: "resize",
+		cols: runtime.terminal.cols,
+		rows: runtime.terminal.rows,
+	});
+}
+
+function sendInit(runtime: TerminalRuntime): void {
+	sendClientMessage(runtime, {
+		type: "init",
+		workspaceId: runtime.workspaceId,
+		sessionKey: runtime.sessionKey,
+	});
+}
+
+function sendClientMessage(
+	runtime: TerminalRuntime,
+	message: TerminalClientMessage,
+): void {
+	if (runtime.socket?.readyState !== WebSocket.OPEN) {
+		return;
+	}
+
+	runtime.socket.send(JSON.stringify(message));
 }
 
 function connectSocket(runtime: TerminalRuntime): void {
@@ -164,6 +199,7 @@ function connectSocket(runtime: TerminalRuntime): void {
 		}
 
 		setConnectionState(runtime, "open");
+		sendInit(runtime);
 		sendResize(runtime);
 	});
 
@@ -240,6 +276,8 @@ class TerminalRuntimeRegistry {
 		if (runtime.websocketUrl !== options.websocketUrl) {
 			runtime.websocketUrl = options.websocketUrl;
 			connectSocket(runtime);
+		} else {
+			sendInit(runtime);
 		}
 
 		attachToHost(runtime, options.host);
@@ -260,9 +298,11 @@ class TerminalRuntimeRegistry {
 	dispose(paneId: string): void {
 		const runtime = this.runtimes.get(paneId);
 		if (!runtime) {
+			this.deferredListeners.delete(paneId);
 			return;
 		}
 
+		sendClientMessage(runtime, { type: "dispose" });
 		runtime.resizeObserver?.disconnect();
 		runtime.resizeObserver = null;
 		runtime.inputDisposable.dispose();
@@ -271,6 +311,7 @@ class TerminalRuntimeRegistry {
 		runtime.wrapper.remove();
 		runtime.terminal.dispose();
 		runtime.listeners.clear();
+		this.deferredListeners.delete(paneId);
 		this.runtimes.delete(paneId);
 	}
 
